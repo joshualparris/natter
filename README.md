@@ -30,7 +30,7 @@ that conversation; tapping the logo starts a fresh one. Typed chats are saved to
 you've gone quiet for two minutes, leave the app, or start a call. Needs Claude (Netlify AI Gateway or `ANTHROPIC_API_KEY`).
 
 ## Testing
-`tests/call.e2e.mjs` and `tests/settings.e2e.mjs` drive the real page in Chrome with a fake microphone against a fake Cartesia agent
+`tests/call.e2e.mjs`, `tests/settings.e2e.mjs` and `tests/devices.e2e.mjs` (emulated phones, tablet, desktops) drive the real page in Chrome with a fake microphone against a fake Cartesia agent
 (calls, barge-in, tools, "remember this", dropped-connection reconnects, scrolling, history, memory,
 typing after a call, push-to-talk; plus passcode lock, voice picker, personality, incognito, history and tools setup). No keys needed:
 

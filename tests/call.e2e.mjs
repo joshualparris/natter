@@ -23,7 +23,7 @@ await page.reload();
 await page.click('#mainBtn');
 await page.waitForFunction(() => document.querySelector('#status').textContent.match(/Listening|Speaking/), null, { timeout: 15000 });
 ok('call connects', true, await status());
-ok('typing box locked during call', await page.isDisabled('#typeBox'));
+ok('typing box hidden and locked during call', await page.isDisabled('#typeBox') && !(await page.isVisible('#typeBox')));
 await page.waitForSelector('.msg.assistant');
 ok('greeting shown', (await page.textContent('.msg.assistant')).includes("G'day"));
 await page.waitForTimeout(2500);
@@ -66,7 +66,7 @@ ok('reconnect sends the conversation so far', /connection just dropped/i.test(se
 // Hang up.
 await page.click('#mainBtn'); await page.waitForTimeout(1500);
 ok('mode menu shown after the call', await page.isVisible('#hero') && (await page.textContent('#heroText')).includes('Chat ended'));
-ok('typing box unlocked after the call', !(await page.isDisabled('#typeBox')));
+ok('typing box back after the call', !(await page.isDisabled('#typeBox')) && await page.isVisible('#typeBox'));
 const hist = await page.evaluate(() => JSON.parse(localStorage.getItem('natter-history') || '[]'));
 ok('call saved to history', hist.length === 1 && hist[0].turns.length >= 3, `${hist[0]?.turns.length} turns`);
 ok('memory summarised after call', (await page.evaluate(() => localStorage.getItem('natter-memory'))).includes('talked about worgs'));
