@@ -23,19 +23,38 @@ globalThis.fetch = async (url, opts = {}) => {
     const text = String(last).includes('Current notes') ? '- talked about worgs' : `Lookup answer for: ${String(last).slice(0, 30)}`;
     return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text }] }), { status: 200 });
   }
+  if (u.includes('/voices?')) {
+    const q = new URL(u).searchParams.get('q') || '';
+    const all = [
+      { id: 'voice-aus-1111-2222', name: 'Matilda', tagline: 'Warm Aussie narrator', gender: 'feminine', accents: [{ accent: 'au' }], preview_file_url: null },
+      { id: 'voice-us-3333-4444', name: 'Brooke', tagline: 'Bright American', gender: 'feminine', accents: [{ accent: 'us' }], preview_file_url: null },
+    ].filter((v) => !q || v.name.toLowerCase().includes(q.toLowerCase()));
+    return new Response(JSON.stringify({ data: all, has_more: false }), { status: 200 });
+  }
+  if (u.includes('/v1/agents/tools')) {
+    log.push({ t: 'tools', method: opts.method || 'GET' });
+    return (opts.method === 'POST')
+      ? new Response(JSON.stringify({ id: 'tool-' + Math.random().toString(36).slice(2, 7) }), { status: 200 })
+      : new Response(JSON.stringify({ data: [] }), { status: 200 });
+  }
+  if (/\/v1\/agents\/agent1$/.test(u)) {
+    log.push({ t: 'agent', method: opts.method || 'GET' });
+    return new Response(JSON.stringify({ id: 'agent1', tools: [] }), { status: 200 });
+  }
   if (u.includes('/tts/bytes')) return new Response(TONE, { status: 200, headers: { 'content-type': 'audio/wav' } });
   if (u.includes('/agents/agent1')) return new Response(JSON.stringify({ voice_id: 'a0e99841-438c-4a64-b679-ae501e7d6091' }), { status: 200 });
   return realFetch(url, opts);
 };
 process.env.CARTESIA_API_KEY = 'c'; process.env.CARTESIA_AGENT_ID = 'agent1'; process.env.ANTHROPIC_API_KEY = 'k';
 const routes = {};
-for (const f of ['session', 'status', 'summarize', 'chat', 'tools-web', 'speak']) {
+for (const f of ['session', 'status', 'summarize', 'chat', 'tools-web', 'speak', 'voices', 'setup-tools']) {
   const mod = (await import(path.join(ROOT, 'netlify/functions', `${f}.mjs`)));
   routes[mod.config.path] = mod.default;
 }
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/__log') { res.end(JSON.stringify(log)); return; }
+  if (url.pathname === '/__passcode') { if (url.searchParams.get('v')) process.env.APP_PASSCODE = url.searchParams.get('v'); else delete process.env.APP_PASSCODE; res.end('ok'); return; }
   if (url.pathname.startsWith('/__agent/')) { agentCommand(url.pathname.split('/')[2]); res.end('ok'); return; }
   if (routes[url.pathname]) {
     const chunks = []; for await (const c of req) chunks.push(c);
