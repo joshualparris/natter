@@ -83,7 +83,8 @@
   #typeForm { display: flex; gap: 8px; width: min(680px, 100%); }
   #typeBox { flex: 1; min-width: 0; resize: none; min-height: 44px; max-height: 140px; padding: 11px 14px; border-radius: 22px; line-height: 1.35; }
   #typeForm button { flex: none; padding: 10px 16px; border-radius: 22px; }
-  #readBtn { font-size: 13px; color: var(--muted); }
+  #readBtn { font-size: 13px; color: var(--muted); padding: 10px 12px; }
+  #typeBox::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #readBtn[aria-pressed="true"] { color: var(--text); border-color: var(--accent); }
 
   #debug { display: none; max-width: 680px; margin: 0 auto 8px; }
@@ -163,7 +164,7 @@
       <button id="muteBtn" aria-pressed="false" disabled>Mute</button>
     </div>
     <form id="typeForm" autocomplete="off">
-      <textarea id="typeBox" rows="1" placeholder="Or type a message…" aria-label="Type a message"></textarea>
+      <textarea id="typeBox" rows="1" placeholder="Type a message…" aria-label="Type a message"></textarea>
       <button type="button" id="readBtn" aria-pressed="true" title="Read typed replies aloud">Read aloud</button>
       <button type="submit" id="sendBtn" class="primary">Send</button>
     </form>

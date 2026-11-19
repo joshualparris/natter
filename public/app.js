@@ -356,7 +356,7 @@ async function startCall() {
   userEnded = false; retries = 0; onCall = true; attempt.cached = null;
   $("mainBtn").textContent = "End"; $("mainBtn").className = "danger";
   $("pttBtn").classList.add("oncall");
-  $("typeBox").placeholder = "On a voice call. End it to type."; $("typeBox").disabled = true; $("sendBtn").disabled = true;
+  $("typeBox").placeholder = "End the call to type"; $("typeBox").disabled = true; $("sendBtn").disabled = true;
   setStatus("Connecting…"); setOrb("thinking");
   conv = { id: Date.now().toString(36), started: new Date().toISOString(), mode: prefs.mode, voice: prefs.voice, incognito: prefs.incognito, plan: null, turns: [] };
   log.textContent = ""; bubbles.clear(); $("hero").style.display = "none"; stick = true;
@@ -395,7 +395,7 @@ function endCall(save = true) {
   stopAudio();
   $("mainBtn").textContent = "Start"; $("mainBtn").className = "primary";
   $("pttBtn").classList.remove("oncall", "held");
-  $("typeBox").placeholder = "Or type a message…"; $("typeBox").disabled = false; $("sendBtn").disabled = false;
+  $("typeBox").placeholder = "Type a message…"; $("typeBox").disabled = false; $("sendBtn").disabled = false;
   $("muteBtn").disabled = true; muted = false; $("muteBtn").setAttribute("aria-pressed", "false"); $("muteBtn").textContent = "Mute";
   orb.style.removeProperty("--s"); setOrb("idle"); setStatus("Ready when you are.");
   showHome(false);

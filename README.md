@@ -29,6 +29,16 @@ and replies are read aloud in your chosen voice (toggle **Read aloud / Silent**)
 that conversation; tapping the logo starts a fresh one. Typed chats are saved to History and update memory once
 you've gone quiet for two minutes, leave the app, or start a call. Needs Claude (Netlify AI Gateway or `ANTHROPIC_API_KEY`).
 
+## Testing
+`tests/call.e2e.mjs` drives the real page in Chrome with a fake microphone against a fake Cartesia agent
+(calls, barge-in, tools, "remember this", dropped-connection reconnects, scrolling, history, memory,
+typing after a call, push-to-talk). No keys needed:
+
+```
+npm i --no-save playwright ws && npx playwright install chromium
+npm run test:e2e
+```
+
 ## Memory
 Each call includes your last three saved conversations (no key needed) plus the Memory notes in Settings.
 Through Netlify AI Gateway (or your own `ANTHROPIC_API_KEY`), the notes are also summarised and updated automatically after each chat.
