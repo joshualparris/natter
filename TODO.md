@@ -11,6 +11,7 @@
 - **Privacy:** incognito mode, auto-delete history after 7/30/90 days, and everything is stored on-device.
 - **Live web search:** via Claude with web search. Also calendar reading (Google iCal) and notes by voice.
 - **Saved transcripts, auto-reconnect, install as a phone app, debug log.**
+- **Typing box:** type instead of talking, with replies read aloud in your voice. (Typing *during* a live voice call isn't supported yet: Cartesia's agent socket only takes audio.)
 
 ## To do
 ### Voice & realism
