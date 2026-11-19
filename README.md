@@ -18,8 +18,16 @@ Hosted on Netlify: https://natter-pc92.netlify.app (deploys automatically from `
 | `ANTHROPIC_API_KEY` | Optional. Auto memory summaries and web lookups. Netlify AI Gateway supplies one automatically; set your own only to bill Anthropic directly |
 | `GOOGLE_CALENDAR_ICS_URL` | Calendar questions (Google Calendar "secret address in iCal format") |
 | `NATTER_PROMPT` | Optional: replaces the base personality |
+| `NATTER_TTS_VOICE` | Optional: Cartesia voice id for reading typed replies aloud when no voice is picked (default: your agent's voice, else your first library voice) |
 
 After changing variables, trigger a redeploy (Deploys → Trigger deploy).
+
+## Typing
+Not in a spot to talk? Type in the box at the bottom instead (Enter sends, Shift+Enter for a new line).
+Typed chats use the same mode, personality, memory and recent chats as calls, can look things up on the web,
+and replies are read aloud in your chosen voice (toggle **Read aloud / Silent**). Typing after a call carries on
+that conversation; tapping the logo starts a fresh one. Typed chats are saved to History and update memory once
+you've gone quiet for two minutes, leave the app, or start a call. Needs Claude (Netlify AI Gateway or `ANTHROPIC_API_KEY`).
 
 ## Memory
 Each call includes your last three saved conversations (no key needed) plus the Memory notes in Settings.

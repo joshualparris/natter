@@ -15,7 +15,7 @@
   :root {
     --bg: #14110f; --panel: #1d1916; --panel-2: #241f1b; --line: #2e2823; --text: #f1e9df; --muted: #9a8f83;
     --accent: #e8a35c; --accent-2: #d9714a; --you: #2a2420; --err: #e0705f; --ok: #8fbf7a;
-    --dock-h: 148px;
+    --dock-h: 200px;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
@@ -51,6 +51,8 @@
   .msg.assistant { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
   .msg.user { align-self: flex-end; background: var(--you); color: #e6dbcf; border-bottom-right-radius: 4px; }
   .msg.cut::after { content: " …"; color: var(--muted); }
+  .msg.pending { color: var(--muted); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .45; } }
   .sys { align-self: center; color: var(--muted); font-size: 13px; text-align: center; }
 
   #jump { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + env(safe-area-inset-bottom) + 10px);
@@ -78,6 +80,11 @@
   #pttBtn.held { background: var(--accent); color: #1a1310; border-color: var(--accent); }
   body.ptt #pttBtn.oncall { display: inline-block; }
   body.ptt #muteBtn { display: none; }
+  #typeForm { display: flex; gap: 8px; width: min(680px, 100%); }
+  #typeBox { flex: 1; min-width: 0; resize: none; min-height: 44px; max-height: 140px; padding: 11px 14px; border-radius: 22px; line-height: 1.35; }
+  #typeForm button { flex: none; padding: 10px 16px; border-radius: 22px; }
+  #readBtn { font-size: 13px; color: var(--muted); }
+  #readBtn[aria-pressed="true"] { color: var(--text); border-color: var(--accent); }
 
   #debug { display: none; max-width: 680px; margin: 0 auto 8px; }
   body.debugging #debug { display: block; }
@@ -132,7 +139,7 @@
   <div class="wrap">
     <section id="log" aria-live="polite" aria-label="Transcript"></section>
     <section id="hero">
-      <p id="heroText">Pick a mode, then tap Start and have a yarn.</p>
+      <p id="heroText">Pick a mode, then tap Start and have a yarn, or type below.</p>
       <div class="chips" id="modeChips"></div>
     </section>
   </div>
@@ -155,6 +162,11 @@
       <button id="pttBtn">Hold to talk</button>
       <button id="muteBtn" aria-pressed="false" disabled>Mute</button>
     </div>
+    <form id="typeForm" autocomplete="off">
+      <textarea id="typeBox" rows="1" placeholder="Or type a message…" aria-label="Type a message"></textarea>
+      <button type="button" id="readBtn" aria-pressed="true" title="Read typed replies aloud">Read aloud</button>
+      <button type="submit" id="sendBtn" class="primary">Send</button>
+    </form>
   </div>
 </footer>
 

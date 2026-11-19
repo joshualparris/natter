@@ -36,6 +36,8 @@ const prefs = {
   get keepDays() { return Number(store.get("natter-keep", "30")); },
   set keepDays(v) { store.set("natter-keep", String(v)); },
   set debug(v) { store.set("natter-debug", v ? "1" : "0"); },
+  get readAloud() { return store.get("natter-read", "1") === "1"; },
+  set readAloud(v) { store.set("natter-read", v ? "1" : "0"); },
 };
 
 // ---------- state ----------
@@ -350,9 +352,11 @@ async function connect(fromPlan, reconnect) {
 }
 
 async function startCall() {
+  stopReading(); flushTextMemory();
   userEnded = false; retries = 0; onCall = true; attempt.cached = null;
   $("mainBtn").textContent = "End"; $("mainBtn").className = "danger";
   $("pttBtn").classList.add("oncall");
+  $("typeBox").placeholder = "On a voice call. End it to type."; $("typeBox").disabled = true; $("sendBtn").disabled = true;
   setStatus("Connecting…"); setOrb("thinking");
   conv = { id: Date.now().toString(36), started: new Date().toISOString(), mode: prefs.mode, voice: prefs.voice, incognito: prefs.incognito, plan: null, turns: [] };
   log.textContent = ""; bubbles.clear(); $("hero").style.display = "none"; stick = true;
@@ -391,6 +395,7 @@ function endCall(save = true) {
   stopAudio();
   $("mainBtn").textContent = "Start"; $("mainBtn").className = "primary";
   $("pttBtn").classList.remove("oncall", "held");
+  $("typeBox").placeholder = "Or type a message…"; $("typeBox").disabled = false; $("sendBtn").disabled = false;
   $("muteBtn").disabled = true; muted = false; $("muteBtn").setAttribute("aria-pressed", "false"); $("muteBtn").textContent = "Mute";
   orb.style.removeProperty("--s"); setOrb("idle"); setStatus("Ready when you are.");
   showHome(false);
@@ -400,8 +405,8 @@ function endCall(save = true) {
 // After a call: show the mode picker under the transcript. Tapping the logo clears back to the start.
 function showHome(clear) {
   if (onCall) return;
-  if (clear) { log.textContent = ""; bubbles.clear(); }
-  $("heroText").textContent = log.childElementCount ? "Chat ended. Pick a mode and tap Start for a new one." : "Pick a mode, then tap Start and have a yarn.";
+  if (clear) { flushTextMemory(); stopReading(); log.textContent = ""; bubbles.clear(); conv = null; }
+  $("heroText").textContent = log.childElementCount ? "Chat ended. Keep typing to carry on, or pick a mode and tap Start for a new one." : "Pick a mode, then tap Start and have a yarn, or type below.";
   $("hero").style.display = "";
   stick = true; followLog();
 }
@@ -624,8 +629,100 @@ function pruneHistory() {
   if (kept.length !== all.length) store.setJson("natter-history", kept);
 }
 
+// ---------- typed chat ----------
+// Type instead of talking (when you're not on a voice call). Replies come from the
+// same Natter (modes, memory, recent chats) and can be read aloud in your voice.
+let reading = null, textBusy = false, memTimer = null;
+
+function addMsg(role, text) {
+  const el = document.createElement("div");
+  el.className = "msg " + role; el.textContent = text;
+  log.appendChild(el); $("hero").style.display = "none"; followLog();
+  return el;
+}
+function stopReading() {
+  if (reading) { reading.pause(); URL.revokeObjectURL(reading.src); reading = null; }
+  if (!onCall) { setOrb("idle"); if (!textBusy) setStatus("Ready when you are."); }
+}
+// Typed chats update memory once you've gone quiet for a bit (or leave / start a call).
+function scheduleTextMemory() {
+  clearTimeout(memTimer);
+  memTimer = setTimeout(flushTextMemory, 120000);
+}
+function flushTextMemory() {
+  clearTimeout(memTimer); memTimer = null;
+  if (conv && conv.typed && !conv.memorised && !conv.incognito && conv.turns.length) { conv.memorised = true; updateMemory(conv); }
+}
+async function readAloud(text) {
+  if (!prefs.readAloud) return;
+  try {
+    const r = await fetch("/api/speak", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passcode: prefs.pass, text, voice: (conv && conv.voice && conv.voice.id) || "", speed: conv && conv.mode === "wind" ? 0.92 : 1 }) });
+    if (!r.ok || !(r.headers.get("content-type") || "").startsWith("audio/")) {
+      const d = await r.json().catch(() => ({})); throw new Error(d.error || `Speech failed (${r.status})`);
+    }
+    const url = URL.createObjectURL(await r.blob());
+    stopReading();
+    if (onCall) { URL.revokeObjectURL(url); return; }
+    reading = new Audio(url);
+    reading.onended = () => stopReading();
+    setOrb("speaking"); setStatus("Reading the reply… (tap the orb to stop)");
+    await reading.play();
+  } catch (e) { debug("·", `read aloud failed: ${e.message}`); toast("Couldn't read that aloud"); stopReading(); }
+}
+async function sendTyped(text) {
+  if (onCall) { toast("You're on a voice call. Just say it, or end the call to type."); return; }
+  if (textBusy || !text.trim()) return;
+  stopReading();
+  // Keep going in the chat on screen (even one that started as a voice call), else start a new one.
+  if (!conv) {
+    conv = { id: Date.now().toString(36), started: new Date().toISOString(), mode: prefs.mode, voice: prefs.voice, incognito: prefs.incognito, plan: "text", turns: [] };
+  }
+  conv.typed = true; conv.memorised = false;
+  const history = conv.turns.slice(-40).map((t) => ({ role: t.role, text: t.text }));
+  addMsg("user", text.trim());
+  conv.turns.push({ role: "user", text: text.trim(), t: Date.now() }); saveConv();
+  const pendingEl = addMsg("assistant", "…"); pendingEl.classList.add("pending");
+  textBusy = true; $("sendBtn").disabled = true; setOrb("thinking"); setStatus("Thinking…");
+  try {
+    const { reply } = await api("/api/chat", {
+      text: text.trim(), history, mode: conv.mode, persona: prefs.persona, incognito: conv.incognito,
+      memory: conv.incognito ? "" : prefs.memory, recentChats: conv.incognito ? "" : recentChats(),
+    });
+    const said = clean(reply);
+    pendingEl.textContent = said; pendingEl.classList.remove("pending"); followLog();
+    conv.turns.push({ role: "assistant", text: said, t: Date.now() }); saveConv();
+    textBusy = false; $("sendBtn").disabled = false; setOrb("idle"); setStatus("Ready when you are.");
+    scheduleTextMemory();
+    readAloud(said);
+  } catch (e) {
+    pendingEl.remove();
+    textBusy = false; $("sendBtn").disabled = false; setOrb("idle");
+    setStatus(e.message, true);
+  }
+}
+const typeBox = $("typeBox");
+function sizeTypeBox() { typeBox.style.height = "auto"; typeBox.style.height = Math.min(140, typeBox.scrollHeight) + "px"; }
+typeBox.addEventListener("input", sizeTypeBox);
+typeBox.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("typeForm").requestSubmit(); }
+});
+$("typeForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = typeBox.value;
+  if (!text.trim() || textBusy) return;
+  if (onCall) { toast("You're on a voice call. Just say it, or end the call to type."); return; }
+  typeBox.value = ""; sizeTypeBox();
+  sendTyped(text);
+});
+function renderRead() { $("readBtn").setAttribute("aria-pressed", String(prefs.readAloud)); $("readBtn").textContent = prefs.readAloud ? "Read aloud" : "Silent"; }
+$("readBtn").onclick = () => { prefs.readAloud = !prefs.readAloud; renderRead(); if (!prefs.readAloud) stopReading(); };
+orb.addEventListener("click", () => { if (reading) stopReading(); });
+window.addEventListener("pagehide", flushTextMemory);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushTextMemory(); });
+
 // ---------- boot ----------
 pruneHistory();
-renderModes(); renderTalk(); showVoiceName(); refreshStatus();
+renderModes(); renderTalk(); renderRead(); showVoiceName(); refreshStatus();
 document.body.classList.toggle("debugging", prefs.debug);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
