@@ -48,7 +48,7 @@ export async function claude({ system, messages, tools, maxTokens = 800 }) {
   if (!key) throw Object.assign(new Error("ANTHROPIC_API_KEY isn't set in your site's environment variables."), { status: 501 });
   let convo = messages;
   for (let i = 0; i < 3; i++) {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    const r = await fetch(`${(process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com").replace(/\/$/, "")}/v1/messages`, {
       method: "POST",
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: maxTokens, system, messages: convo, ...(tools ? { tools } : {}) }),
